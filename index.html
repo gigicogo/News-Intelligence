@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="News Intelligence: aggregatore RSS e rassegne informative personali. Prima fase dimostrativa.">
+  <meta name="description" content="News Intelligence: aggregatore RSS e rassegne informative personali. Ricerca effettiva nei feed archiviati.">
   <title>News Intelligence · Aggregatore e rassegne</title>
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
@@ -22,30 +22,36 @@
         <button type="button" class="nav-button" data-view="rassegna"><span aria-hidden="true">▤</span> Crea rassegna <span id="selectionCountBadge" class="nav-count">0</span></button>
       </nav>
       <div class="side-note">
-        <div class="small-chip">FASE 1 · ANTEPRIMA</div>
-        <p>Qui proviamo i filtri, la gestione degli indirizzi RSS e la rassegna.</p>
-        <p><strong>Non vengono ancora scaricate notizie.</strong> Il motore RSS verrà collegato nella fase 2.</p>
+        <div class="small-chip">FASE 2F · DATI REALI</div>
+        <p>Notizie importate da Cloudflare: ricerca e rassegna usando risultati reali.</p>
+        <p><strong>Abstract non ancora generati con IA.</strong> Usiamo le descrizioni pubblicate nei feed.</p>
       </div>
-      <div class="sidebar-foot">Nessuna API · Nessun token · Zero account aggiuntivi in questa fase</div>
+      <div class="sidebar-foot">API di sola lettura · Nessuna password nel sito</div>
     </aside>
 
     <main class="main-content">
       <header class="topbar">
         <span class="eyebrow">WORKSPACE PERSONALE</span>
-        <span class="stage-pill"><span class="status-dot"></span> Modalità dimostrativa</span>
+        <span class="stage-pill"><span class="status-dot"></span> Connessione ai feed reali</span>
       </header>
 
       <section id="view-ricerca" class="view" aria-labelledby="titleSearch">
         <div class="page-intro">
           <span class="eyebrow accent">SCOPRI, SELEZIONA, RIASSUMI</span>
           <h1 id="titleSearch">Trova le notizie.<br><span>Conserva ciò che conta.</span></h1>
-          <p>Filtra per argomento, periodo e area geografica. Seleziona i risultati che ti interessano e crea una rassegna con titoli cliccabili e abstract brevi.</p>
+          <p>Cerca negli articoli archiviati dai feed RSS, seleziona i risultati e crea una rassegna con i titoli cliccabili e gli estratti disponibili.</p>
         </div>
+        <form id="apiForm" class="panel api-panel">
+          <div class="panel-head"><div><h2>Collega il motore RSS</h2><p>Incolla una volta l'indirizzo pubblico del Worker Cloudflare, senza /health. Nessuna password.</p></div></div>
+          <label class="field-label" for="workerUrl">Indirizzo Worker (https://...workers.dev)</label>
+          <div class="query-row"><input id="workerUrl" type="url" placeholder="https://news-intelligence-worker.nome.workers.dev" autocomplete="url" required><button class="primary-button" type="submit">Collega</button></div>
+          <p class="form-message" role="status" id="apiStatus">Collega il Worker per visualizzare le notizie reali.</p>
+        </form>
         <form id="searchForm" class="panel filters-panel">
-          <div class="panel-head"><div><h2>Imposta la ricerca</h2><p>Per ora i filtri lavorano sull'articolo dimostrativo.</p></div><span class="mini-label">FILTRI GUIDATI</span></div>
+          <div class="panel-head"><div><h2>Imposta la ricerca</h2><p>Titolo, descrizione e testo RSS indicizzato nel database.</p></div><span class="mini-label">FILTRI GUIDATI</span></div>
           <label class="field-label" for="searchQuery">Argomento o parole chiave</label>
           <div class="query-row">
-            <input id="searchQuery" name="query" type="search" placeholder="Es. OpenAI, telemarketing, agenti IA" value="OpenAI" autocomplete="off">
+            <input id="searchQuery" name="query" type="search" placeholder="Es. OpenAI, telemarketing, agenti IA" value="" autocomplete="off">
             <button class="primary-button" type="submit">⌕ &nbsp; Cerca</button>
           </div>
           <div class="filters-grid">
@@ -57,8 +63,8 @@
                 <button class="filter-pill selected" type="button" data-value="7" aria-pressed="true">7 giorni</button>
               </div>
             </fieldset>
-            <fieldset class="filter-group">
-              <legend>Area della notizia</legend>
+            <fieldset class="filter-group" disabled>
+              <legend>Area della notizia (in preparazione)</legend>
               <div class="pill-group" data-group="area">
                 <button class="filter-pill selected" type="button" data-value="tutte" aria-pressed="true">Tutte</button>
                 <button class="filter-pill" type="button" data-value="italia" aria-pressed="false">Italia</button>
@@ -66,8 +72,8 @@
                 <button class="filter-pill" type="button" data-value="mondo" aria-pressed="false">Mondo</button>
               </div>
             </fieldset>
-            <fieldset class="filter-group wide">
-              <legend>Tipo di contenuto</legend>
+            <fieldset class="filter-group wide" disabled>
+              <legend>Tipo di contenuto (in preparazione)</legend>
               <div class="pill-group" data-group="tipo">
                 <button class="filter-pill selected" type="button" data-value="tutti" aria-pressed="true">Tutti</button>
                 <button class="filter-pill" type="button" data-value="novita" aria-pressed="false">Novità e annunci</button>
@@ -80,30 +86,22 @@
           <div><span class="eyebrow">RISULTATI</span><h2>Notizie individuate</h2></div>
           <span class="result-count" id="resultsCount">0 risultati</span>
         </div>
-        <div class="notice" role="note"><strong>ℹ️ Esempio controllato.</strong> Il risultato iniziale riprende l'articolo DDay che hai indicato. Non è stato recuperato automaticamente da un feed e non rappresenta una ricerca sul web.</div>
+        <div class="notice" role="note"><strong>Nota sugli estratti:</strong> i testi visualizzati provengono dalle descrizioni RSS. Non sono ancora abstract editoriali prodotti dall'IA. I filtri geografici e per tipologia saranno attivati dopo la classificazione dei contenuti.</div>
         <div id="results" class="results-list" aria-live="polite"></div>
         <div class="action-bar"><span id="selectedSummary">Nessun articolo selezionato</span><button type="button" id="goToRassegna" class="secondary-button" disabled>Prepara la rassegna →</button></div>
       </section>
 
       <section id="view-feed" class="view" hidden aria-labelledby="titleFeeds">
-        <div class="page-intro compact"><span class="eyebrow accent">LE TUE FONTI</span><h1 id="titleFeeds">Gestisci i tuoi <span>feed RSS.</span></h1><p>Inserisci gli indirizzi dei feed che vuoi seguire. In questa prima fase li salviamo soltanto nel browser: li collegheremo al motore di acquisizione nella fase 2.</p></div>
-        <form id="feedForm" class="panel" autocomplete="off">
-          <div class="panel-head"><div><h2>Aggiungi una fonte</h2><p>Usa l'indirizzo del feed RSS, non quello della homepage.</p></div></div>
-          <div class="two-fields">
-            <div><label class="field-label" for="feedName">Nome della fonte</label><input id="feedName" type="text" maxlength="70" required placeholder="Es. DDay.it"></div>
-            <div><label class="field-label" for="feedUrl">Indirizzo RSS (https://...)</label><input id="feedUrl" type="url" required placeholder="https://esempio.it/feed.xml" inputmode="url"></div>
-          </div>
-          <div class="form-bottom"><p id="feedMessage" class="form-message" role="status">Per sicurezza sono accettati solo indirizzi HTTPS.</p><button type="submit" class="primary-button">＋ Aggiungi feed</button></div>
-        </form>
-        <div class="section-heading"><div><span class="eyebrow">ARCHIVIO FONTI</span><h2>Feed inseriti</h2></div><span class="result-count" id="feedCount">0 feed</span></div>
+        <div class="page-intro compact"><span class="eyebrow accent">LE TUE FONTI</span><h1 id="titleFeeds">I feed RSS <span>collegati.</span></h1><p>Elenco delle fonti registrate nel database Cloudflare. In questa fase sono consultabili in sola lettura: non inserire password amministrative nella pagina.</p></div>
+        <div class="section-heading"><div><span class="eyebrow">FONTI CONFIGURATE</span><h2>Feed dal database</h2></div><span class="result-count" id="feedCount">0 feed</span></div>
         <div id="feedList" class="feed-list" aria-live="polite"></div>
-        <div class="notice info"><strong>Dove finiscono questi dati?</strong> Nella memoria locale di questo browser (localStorage). Se cambi dispositivo o cancelli i dati del browser, in questa fase perderai l'elenco. Dal prossimo collegamento al database lo conserveremo online.</div>
+        <div class="notice info"><strong>Nuovi feed:</strong> l'aggiunta e la rimozione protette verranno sviluppate nel passo successivo. Per ora visualizziamo soltanto le fonti realmente inserite in Cloudflare.</div>
       </section>
 
       <section id="view-rassegna" class="view" hidden aria-labelledby="titleRassegna">
         <div class="page-intro compact"><span class="eyebrow accent">DALLA RICERCA ALLA RASSEGNA</span><h1 id="titleRassegna">La tua <span>rassegna.</span></h1><p>Scegli gli articoli dalla ricerca, attribuisci un titolo e genera un documento con collegamenti alle fonti e abstract di poche righe.</p></div>
         <div class="panel rassegna-controls">
-          <div class="panel-head"><div><h2>Prepara il documento</h2><p>Le rassegne di questa fase sono generate dai risultati dimostrativi selezionati.</p></div></div>
+          <div class="panel-head"><div><h2>Prepara il documento</h2><p>La rassegna usa gli articoli reali selezionati, con gli estratti RSS disponibili.</p></div></div>
           <label for="rassegnaTitle" class="field-label">Titolo della rassegna</label>
           <input id="rassegnaTitle" type="text" maxlength="100" value="Rassegna · Intelligenza artificiale">
           <div class="form-bottom"><span id="rassegnaSelection" class="form-message">0 articoli selezionati</span><button id="generateRassegna" class="primary-button" type="button">▤ Genera rassegna</button></div>
@@ -116,7 +114,7 @@
         </div>
       </section>
 
-      <footer class="main-footer">News Intelligence · Prototipo funzionale della sola interfaccia · Fase 1</footer>
+      <footer class="main-footer">News Intelligence · Ricerca RSS reale e rassegne · Fase 2F</footer>
     </main>
   </div>
 </body>

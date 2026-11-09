@@ -16,6 +16,28 @@
 
   
 .admin-panel{margin-bottom:20px}.admin-panel .panel-head{margin-bottom:16px}.admin-banner{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 11px;margin-bottom:16px;border-radius:8px;background:#e8f8f2;color:#087b69;font-size:12px;font-weight:700}.admin-status{margin-top:14px!important}.feed-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-left:auto}.feed-action-btn{background:#fff;border:1px solid #cddde7;color:#1c6177;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:750;cursor:pointer}.feed-action-btn:hover{background:#eef9fc}.feed-action-btn.danger{color:#9c3846;border-color:#ead0d5}.feed-action-btn.danger:hover{background:#fff0f2}.feed-action-btn:disabled{opacity:.45}.feed-card{align-items:flex-start}.feed-card.is-paused{background:#f7f9fb}.feed-card.is-paused .rss-avatar{background:#e8eaed;color:#758798}.admin-panel .form-bottom{flex-wrap:wrap}@media(max-width:720px){.feed-card{flex-wrap:wrap}.feed-actions{width:100%;justify-content:flex-end}.admin-banner{flex-wrap:wrap}}
+
+/* Fase 3F: importazione OPML, solo lato browser. */
+.opml-panel{border-top:1px solid #dfe8ef;margin-top:25px;padding-top:23px}
+.opml-panel h3{font-size:16px;margin:0 0 7px;color:#183b53}
+.opml-panel p{font-size:12px;color:#638093;line-height:1.65;margin:7px 0 13px}
+.opml-file-input{max-width:520px;font-size:12px;padding:9px;background:#f9fcff}
+.opml-preview{margin-top:14px;border:1px solid #dbe9f0;background:#f8fbfd;border-radius:10px;padding:16px}
+.opml-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.opml-source-list{max-height:290px;overflow-y:auto;border:1px solid #e0e8ef;border-radius:8px;background:#fff}
+.opml-source-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-bottom:1px solid #edf1f5;font-size:12px}
+.opml-source-row:last-child{border-bottom:0}
+.opml-source-row>input{width:16px;height:16px;flex:0 0 auto;accent-color:#0589a4}
+.opml-source-row>span{flex:1;min-width:0}
+.opml-source-row strong{display:block;overflow-wrap:anywhere;color:#183b53}
+.opml-source-row small{display:block;color:#7691a4;overflow-wrap:anywhere;margin-top:3px}
+.opml-status-label{font-size:11px;color:#55778a;font-weight:700;white-space:nowrap}
+.opml-source-row[data-status="existing"]{background:#f5f8fb}
+.opml-source-row[data-status="imported"]{background:#eef9f4}
+.opml-source-row[data-status="invalid"],.opml-source-row[data-status="error"]{background:#fff8f6}
+.opml-footer{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:14px;flex-wrap:wrap}
+.opml-footer .primary-button{white-space:normal}
+@media(max-width:720px){.opml-source-row{flex-wrap:wrap}.opml-status-label{width:100%;padding-left:28px}}
 </style>
 
 </head>
@@ -33,11 +55,11 @@
         <button type="button" class="nav-button" data-view="rassegna"><span aria-hidden="true">▤</span> Crea rassegna <span id="selectionCountBadge" class="nav-count">0</span></button>
       </nav>
       <div class="side-note">
-        <div class="small-chip">FASE 3E · GESTIONE MULTI-FEED</div>
+        <div class="small-chip">FASE 3F · GESTIONE MULTI-FEED</div>
         <p>Notizie importate da Cloudflare: ricerca e rassegna usando risultati reali.</p>
         <p><strong>Abstract non ancora generati con IA.</strong> Usiamo le descrizioni pubblicate nei feed.</p>
       </div>
-      <div class="sidebar-foot">API di sola lettura · Nessuna password nel sito</div>
+      <div class="sidebar-foot">Lettura pubblica · Gestione RSS protetta</div>
     </aside>
 
     <main class="main-content">
@@ -120,6 +142,25 @@
               </div>
               <div class="form-bottom"><span class="form-message">Il sito della fonte deve pubblicare un feed RSS/Atom accessibile via HTTPS.</span><button type="submit" class="primary-button" id="addFeedButton">+ Verifica e aggiungi feed</button></div>
             </form>
+            <div class="opml-panel">
+              <h3>Importa più fonti da un file OPML</h3>
+              <p>Hai già dei feed in Feedly, Inoreader o in un altro lettore? Esporta l’elenco in formato <strong>.opml</strong> e selezionalo qui. Vedrai un’anteprima prima di aggiungere qualsiasi fonte. Nessun file viene caricato su server esterni.</p>
+              <label for="opmlFile" class="field-label">Seleziona il file OPML dal tuo computer</label>
+              <input id="opmlFile" class="opml-file-input" type="file" accept=".opml,.xml,text/xml,application/xml">
+              <div id="opmlPreview" class="opml-preview" hidden>
+                <p id="opmlSummary" role="status"></p>
+                <div class="opml-toolbar">
+                  <button type="button" id="opmlSelectAll" class="secondary-button small">Seleziona tutte le nuove</button>
+                  <button type="button" id="opmlSelectNone" class="secondary-button small">Deseleziona</button>
+                </div>
+                <div id="opmlSourceList" class="opml-source-list" aria-label="Anteprima delle fonti OPML"></div>
+                <div class="opml-footer">
+                  <span class="form-message">Massimo 8 nuovi feed per clic, per non sovraccaricare il Worker gratuito.</span>
+                  <button type="button" id="opmlImportButton" class="primary-button" disabled>Importa selezionate</button>
+                </div>
+                <p id="opmlImportStatus" class="form-message" role="status" aria-live="polite"></p>
+              </div>
+            </div>
           </div>
           <p id="feedActionStatus" role="status" class="form-message admin-status">Gestione bloccata. Le fonti sotto sono comunque consultabili.</p>
         </div>
@@ -144,7 +185,7 @@
         </div>
       </section>
 
-      <footer class="main-footer">News Intelligence · Ricerca RSS, multi-feed e rassegne · Fase 3E</footer>
+      <footer class="main-footer">News Intelligence · Ricerca RSS, multi-feed e rassegne · Fase 3F</footer>
     </main>
   </div>
   <script>
@@ -424,6 +465,128 @@ async function loadFeeds() {
     container.innerHTML='<div class="empty-state"><h3>Impossibile leggere le fonti</h3><p>Verifica il collegamento al Worker.</p></div>';
   }
 }
+
+// Fase 3F — Importazione OPML: nessun nuovo endpoint, usa /admin/feeds già presente nel Worker 3E.
+const OPML_BATCH_SIZE = 8;
+const OPML_FILE_LIMIT = 2 * 1024 * 1024;
+const OPML_MAX_ENTRIES = 500;
+let opmlEntries = [];
+let opmlImportBusy = false;
+function comparableFeedUrl(value) {
+  try {
+    const u = new URL(String(value).trim());
+    if (u.protocol !== 'https:' || u.username || u.password) return '';
+    return u.origin.toLowerCase() + u.pathname.replace(/\/+$/, '') + u.search;
+  } catch { return ''; }
+}
+function opmlStateLabel(status) {
+  return ({new:'Da importare',existing:'Già presente',imported:'Importato',invalid:'URL non valido / non HTTPS',error:'Importazione non riuscita'})[status] || status;
+}
+function setOpmlStatus(message, kind='') {
+  const el = get('opmlImportStatus');
+  el.textContent = message;
+  el.className = 'form-message' + (kind ? ' ' + kind : '');
+}
+function renderOpmlPreview() {
+  const selected = opmlEntries.filter(x=>x.status==='new' && x.selected).length;
+  const newCount = opmlEntries.filter(x=>x.status==='new').length;
+  const existing = opmlEntries.filter(x=>x.status==='existing').length;
+  const imported = opmlEntries.filter(x=>x.status==='imported').length;
+  const invalid = opmlEntries.filter(x=>x.status==='invalid').length;
+  get('opmlSummary').textContent = `${opmlEntries.length} fonti nel file · ${newCount} nuove · ${existing} già presenti · ${imported} importate · ${invalid} non valide.`;
+  get('opmlSourceList').innerHTML = opmlEntries.map((x,i)=>`<label class="opml-source-row" data-status="${x.status}">
+    <input type="checkbox" data-opml-index="${i}" ${x.selected && x.status==='new'?'checked':''} ${x.status!=='new' || opmlImportBusy?'disabled':''}>
+    <span><strong>${safeText(x.name)}</strong><small>${safeText(x.url)}</small></span>
+    <span class="opml-status-label">${safeText(opmlStateLabel(x.status))}</span></label>`).join('');
+  get('opmlImportButton').disabled = opmlImportBusy || !adminToken || selected===0;
+  get('opmlImportButton').textContent = opmlImportBusy ? 'Importazione in corso…' : `Importa ${Math.min(selected,OPML_BATCH_SIZE)} feed${selected>OPML_BATCH_SIZE?' (poi i successivi)':''}`;
+  get('opmlSelectAll').disabled = opmlImportBusy;
+  get('opmlSelectNone').disabled = opmlImportBusy;
+}
+async function loadOpmlFile() {
+  if (opmlImportBusy) return;
+  opmlEntries = [];
+  get('opmlPreview').hidden=true;
+  const file = get('opmlFile').files?.[0];
+  if (!file) return;
+  get('opmlPreview').hidden=false;
+  if (file.size > OPML_FILE_LIMIT) {
+    get('opmlSummary').textContent='File troppo grande.';
+    setOpmlStatus('Il file deve essere inferiore a 2 MB. Esporta una selezione di feed più piccola.', 'error');
+    return;
+  }
+  setOpmlStatus('Sto leggendo il file e controllando i feed già presenti…');
+  try {
+    const content=await file.text();
+    if (/<\!DOCTYPE/i.test(content)) throw new Error('Il file contiene una dichiarazione DOCTYPE non supportata.');
+    const xml=new DOMParser().parseFromString(content,'application/xml');
+    if (xml.querySelector('parsererror') || xml.documentElement?.localName?.toLowerCase() !== 'opml')
+      throw new Error('Il file non è un OPML valido. Esporta l’elenco dei feed in formato OPML.');
+    const outlines=Array.from(xml.getElementsByTagName('outline'));
+    const found=new Set();
+    for (const node of outlines) {
+      const raw=(node.getAttribute('xmlUrl')||node.getAttribute('xmlurl')||'').trim();
+      if (!raw) continue;
+      const key=comparableFeedUrl(raw);
+      if (key && found.has(key)) continue;
+      if (key) found.add(key);
+      const name=(node.getAttribute('title')||node.getAttribute('text')||'').trim().slice(0,90) || (key ? new URL(key).hostname : 'Fonte senza nome');
+      opmlEntries.push({name,url:raw,key,status:key?'new':'invalid',selected:!!key});
+      if (opmlEntries.length >= OPML_MAX_ENTRIES) break;
+    }
+    if (!opmlEntries.length) throw new Error('Non ho trovato indirizzi RSS (attributi xmlUrl) nel file OPML.');
+    const data=await fetchJson('/feeds');
+    const saved=new Set((data.feeds||[]).map(f=>comparableFeedUrl(f.url)).filter(Boolean));
+    for(const entry of opmlEntries) if(entry.key && saved.has(entry.key)) {
+      entry.status='existing'; entry.selected=false;
+    }
+    renderOpmlPreview();
+    setOpmlStatus(`Anteprima pronta. Nessuna fonte è stata importata. Seleziona solo quelle che desideri aggiungere. ${outlines.length > OPML_MAX_ENTRIES ? 'Il file è grande: vengono mostrate soltanto le prime 500 fonti.' : ''}`,'success');
+  } catch(error) {
+    get('opmlSummary').textContent='Impossibile leggere questo file.';
+    get('opmlSourceList').innerHTML='';
+    get('opmlImportButton').disabled=true;
+    setOpmlStatus(error.message || 'Errore nella lettura del file.', 'error');
+  }
+}
+function onOpmlCheckbox(event) {
+  if (opmlImportBusy) return;
+  const node=event.target.closest('[data-opml-index]');
+  if (!node) return;
+  const entry=opmlEntries[Number(node.dataset.opmlIndex)];
+  if(entry && entry.status==='new') entry.selected=node.checked;
+  renderOpmlPreview();
+}
+function selectOpmlEntries(all) {
+  if (opmlImportBusy) return;
+  for(const entry of opmlEntries) if(entry.status==='new') entry.selected=all;
+  renderOpmlPreview();
+}
+async function importOpmlBatch() {
+  if (opmlImportBusy || !adminToken) return setOpmlStatus('Sblocca prima la gestione.', 'error');
+  const batch=opmlEntries.filter(x=>x.selected && x.status==='new').slice(0,OPML_BATCH_SIZE);
+  if (!batch.length) return setOpmlStatus('Non ci sono nuove fonti selezionate da importare.');
+  opmlImportBusy=true;
+  renderOpmlPreview();
+  let done=0, failed=0;
+  for (const entry of batch) {
+    setOpmlStatus(`Importazione ${done+failed+1} di ${batch.length}: ${entry.name}…`);
+    try {
+      await adminFetch('/admin/feeds',{method:'POST',data:{name:entry.name,url:entry.url}});
+      entry.status='imported'; entry.selected=false; done++;
+    } catch(error) {
+      entry.status='error'; entry.selected=false; entry.error=String(error.message||error); failed++;
+    }
+  }
+  opmlImportBusy=false;
+  renderOpmlPreview();
+  await loadFeeds();
+  await runSearch();
+  const remaining=opmlEntries.filter(x=>x.selected && x.status==='new').length;
+  const errors=opmlEntries.filter(x=>x.status==='error').map(x=>`${x.name}: ${x.error}`).slice(0,3);
+  setOpmlStatus(`${done} nuove fonti aggiunte, ${failed} non riuscite. ${remaining ? `Restano ${remaining} feed selezionati: premi di nuovo Importa per il gruppo successivo.` : 'Importazione del gruppo completata.'}${errors.length ? ' Errori: '+errors.join(' | ') : ''}`,failed?'error':'success');
+}
+
 function markdownRassegna() {
   const today = new Date().toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'});
   const lines = generatedArticles.map(a => `### [${a.title}](${a.url})\n\nFonte: ${a.source} · ${formatDate(a.published_at || a.first_seen_at)}\n\n> ${a.abstract || 'Descrizione non disponibile'}\n\n_${abstractLabel(a)}_\n`);
@@ -458,6 +621,11 @@ get('adminUnlockForm').addEventListener('submit',unlockFeeds);
 get('adminLockButton').addEventListener('click',lockFeeds);
 get('addFeedForm').addEventListener('submit',addNewFeed);
 get('feedList').addEventListener('click',changeFeedAction);
+get('opmlFile').addEventListener('change',loadOpmlFile);
+get('opmlSourceList').addEventListener('change',onOpmlCheckbox);
+get('opmlSelectAll').addEventListener('click',()=>selectOpmlEntries(true));
+get('opmlSelectNone').addEventListener('click',()=>selectOpmlEntries(false));
+get('opmlImportButton').addEventListener('click',importOpmlBatch);
 get('searchForm').addEventListener('submit',e=>{e.preventDefault();runSearch();});
 get('goToRassegna').addEventListener('click',()=>showView('rassegna'));
 get('generateRassegna').addEventListener('click',generateRassegna);
@@ -465,7 +633,7 @@ get('copyRassegna').addEventListener('click',copyRassegna);
 get('downloadRassegna').addEventListener('click',downloadRassegna);
 get('printRassegna').addEventListener('click',()=>window.print());
 get('workerUrl').value = apiBase;
-if (!apiBase) setStatus('Interfaccia 3E pronta: collega il Worker per visualizzare le notizie e gestire più fonti.', 'info');
+if (!apiBase) setStatus('Interfaccia 3F pronta: collega il Worker per visualizzare le notizie e gestire più fonti.', 'info');
 updateSelection();
 runSearch();
 const initialView = window.location.hash.slice(1);

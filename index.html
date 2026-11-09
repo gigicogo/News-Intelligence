@@ -41,6 +41,24 @@
 .opml-footer{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:14px;flex-wrap:wrap}
 .opml-footer .primary-button{white-space:normal}
 @media(max-width:720px){.opml-source-row{flex-wrap:wrap}.opml-status-label{width:100%;padding-left:28px}}
+
+/* Fase 3M - Area editoriale IA */
+select,textarea{font:inherit;color:#15334b}
+.editor-panel{margin:0 0 24px;border-color:#c9e5ec}
+.editor-panel select{width:100%;background:#fff;padding:12px 13px;border:1px solid #dbe6ed;border-radius:8px;outline:none}
+.editor-panel textarea{width:100%;resize:vertical;min-height:138px;border:1px solid #cfdfe8;background:#f8fbfd;border-radius:9px;padding:15px;font-size:13px;line-height:1.75}
+.editor-instructions{color:#637f90;font-size:12px;line-height:1.6;margin:8px 0 19px}
+.editor-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0}
+.editor-stage{background:#f5f9fc;border:1px solid #e0eaf0;border-radius:10px;padding:17px;margin:15px 0}
+.editor-stage h3{font-size:14px;margin:0 0 10px}
+.editor-review{display:flex;align-items:flex-start;gap:10px;margin:15px 0 10px;font-size:12px;line-height:1.55;color:#38556c}
+.editor-review input{width:17px;height:17px;flex:0 0 17px;margin:2px 0 0;accent-color:#087e9b}
+.editor-source-link{display:inline-block;font-size:12px;color:#087e9b;margin:9px 0}
+.editor-stage .form-message{margin-top:9px}
+.editor-draft-info{font-size:12px;color:#637e90;margin:9px 0;line-height:1.6}
+.editor-emphasis{font-weight:750;color:#187e96}
+@media(max-width:720px){.editor-actions{align-items:stretch;flex-direction:column}.editor-actions button{white-space:normal;width:100%}}
+
 </style>
 
 </head>
@@ -58,7 +76,7 @@
         <button type="button" class="nav-button" data-view="rassegna"><span aria-hidden="true">▤</span> Crea rassegna <span id="selectionCountBadge" class="nav-count">0</span></button>
       </nav>
       <div class="side-note">
-        <div class="small-chip">FASE 3L · ABSTRACT CORRETTI</div>
+        <div class="small-chip">FASE 3M · REVISIONE IA</div>
         <p>Notizie importate da Cloudflare: ricerca e rassegna usando risultati reali.</p>
         <p><strong>Abstract IA approvati, quando disponibili.</strong> Altrimenti usiamo sintesi ed estratti RSS.</p>
       </div>
@@ -173,7 +191,34 @@
       </section>
 
       <section id="view-rassegna" class="view" hidden aria-labelledby="titleRassegna">
-        <div class="page-intro compact"><span class="eyebrow accent">DALLA RICERCA ALLA RASSEGNA</span><h1 id="titleRassegna">La tua <span>rassegna.</span></h1><p>Scegli gli articoli dalla ricerca, attribuisci un titolo e genera un documento con collegamenti alle fonti e abstract di poche righe.</p></div>
+        <div class="page-intro compact"><span class="eyebrow accent">REDAZIONE ASSISTITA E RASSEGNA</span><h1 id="titleRassegna">La tua <span>rassegna.</span></h1><p>Scegli gli articoli dalla ricerca, attribuisci un titolo e genera un documento con collegamenti alle fonti e abstract di poche righe.</p></div>
+
+        <div class="panel editor-panel" id="aiEditorPanel">
+          <div class="panel-head"><div><h2>✦ Laboratorio editoriale IA</h2><p>Genera, verifica e approva un abstract per volta, senza entrare nella console Cloudflare.</p></div><span class="mini-label">RISERVATO</span></div>
+          <p class="editor-instructions">Seleziona un articolo nella sezione Ricerca, poi scegli qui quale elaborare. La generazione utilizza Workers AI soltanto quando non esiste già una bozza nella cache. Al momento è disponibile per le quattro fonti del collaudo.</p>
+          <label class="field-label" for="editorArticle">Articolo da esaminare</label>
+          <select id="editorArticle" aria-label="Scegli articolo per sintesi IA" disabled><option value="">Prima seleziona un articolo nella Ricerca</option></select>
+          <p id="editorSelectionInfo" class="editor-instructions" role="status">Nessun articolo selezionato.</p>
+          <form id="editorLoginForm">
+            <label for="editorPassword" class="field-label">Password amministrativa di Cloudflare</label>
+            <div class="query-row"><input id="editorPassword" type="password" autocomplete="off" placeholder="ADMIN_TOKEN (solo per questa scheda)" required><button id="editorUnlockButton" class="secondary-button" type="submit">Sblocca editor</button></div>
+            <p class="editor-instructions">La password viene usata soltanto durante questa sessione, tramite HTTPS. Non viene salvata su GitHub o nel browser.</p>
+          </form>
+          <div id="editorUnlocked" hidden>
+            <div class="admin-banner"><span>✓ Area editoriale sbloccata</span><button type="button" id="editorLockButton" class="secondary-button small">Blocca</button></div>
+            <div class="editor-actions"><button id="editorGenerate" class="primary-button" type="button" disabled>✦ Genera / recupera abstract IA</button><span class="form-message">Una richiesta alla volta · Nessuna generazione in massa</span></div>
+            <section id="editorDraft" class="editor-stage" hidden aria-label="Bozza editoriale">
+              <h3>Abstract da verificare</h3>
+              <p class="editor-draft-info" id="editorDraftInfo"></p>
+              <textarea id="editorAbstract" readonly aria-label="Testo dell'abstract IA"></textarea>
+              <a id="editorSourceLink" class="editor-source-link" href="#" target="_blank" rel="noopener noreferrer">Apri l'articolo originale ↗</a>
+              <p class="editor-instructions">Confronta nomi, numeri, attribuzioni e previsioni con la fonte originale. La verifica automatica dei numeri non sostituisce il controllo editoriale. La modifica manuale del testo sarà aggiunta in una fase successiva.</p>
+              <label class="editor-review"><input id="editorReviewed" type="checkbox"><span>Ho verificato la fedeltà del testo rispetto all'articolo originale e desidero approvarlo per la rassegna.</span></label>
+              <div class="editor-actions"><button id="editorApprove" class="primary-button" type="button" disabled>Approva per la rassegna</button><button id="editorRevoke" class="secondary-button" type="button" disabled>Riporta in bozza</button></div>
+            </section>
+          </div>
+          <p id="editorMessage" role="status" aria-live="polite" class="form-message">Per iniziare, seleziona almeno un articolo.</p>
+        </div>
         <div class="panel rassegna-controls">
           <div class="panel-head"><div><h2>Prepara il documento</h2><p>La rassegna usa gli articoli selezionati con abstract IA già approvati, oppure estratti e sintesi RSS.</p></div></div>
           <label for="rassegnaTitle" class="field-label">Titolo della rassegna</label>
@@ -188,13 +233,13 @@
         </div>
       </section>
 
-      <footer class="main-footer">News Intelligence · Ricerca RSS, multi-feed e rassegne · Fase 3L</footer>
+      <footer class="main-footer">News Intelligence · Ricerca RSS, multi-feed e rassegne · Fase 3M</footer>
     </main>
   </div>
   <script>
 'use strict';
 
-// Fase 3L: abstract IA approvati e contenuti RSS sono etichettati correttamente. Non genera nuove chiamate AI.
+// Fase 3M: selezione e revisione protetta di un abstract IA alla volta. I comandi esistono già nel Worker 3J.
 // L'URL del Worker è pubblico; ADMIN_TOKEN non deve mai essere scritto in questi file.
 const API_KEY = 'news-intelligence-worker-url';
 const filters = { periodo: '7' };
@@ -205,6 +250,9 @@ let generatedArticles = [];
 let generatedTitle = '';
 let queryNumber = 0;
 let adminToken = ""; // Solo in memoria: mai in localStorage, cookies o GitHub.
+let editorResult = null;
+let editorBusy = false;
+
 
 function get(id) { return document.getElementById(id); }
 function safeText(value) { return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
@@ -244,6 +292,7 @@ function updateSelection() {
   get('goToRassegna').disabled = n === 0;
   get('rassegnaSelection').textContent = `${n} articol${n===1?'o selezionato':'i selezionati'}`;
   get('generateRassegna').disabled = n === 0;
+  syncEditorSelection();
 }
 function invalidateRassegna() {
   if (!generatedArticles.length) return;
@@ -398,6 +447,7 @@ async function adminFetch(path, options={}) {
 function setAdminUnlocked(unlocked) {
   get('adminUnlockForm').hidden=unlocked;
   get('adminUnlocked').hidden=!unlocked;
+  syncEditorAccess();
 }
 async function unlockFeeds(event) {
   event.preventDefault();
@@ -649,11 +699,149 @@ function downloadRassegna() {
   setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 
+
+// Area editoriale protetta: riusa /admin/feeds per il controllo password
+// e /admin/ai-abstract del Worker 3J. Solo approvazioni esplicite diventano pubbliche.
+function editorMessage(text, kind='') {
+  const n=get('editorMessage');
+  n.textContent=text;
+  n.className='form-message'+(kind?' '+kind:'');
+}
+function clearEditorDraft() {
+  editorResult=null;
+  get('editorDraft').hidden=true;
+  get('editorAbstract').value='';
+  get('editorReviewed').checked=false;
+  get('editorApprove').disabled=true;
+  get('editorRevoke').disabled=true;
+}
+function syncEditorAccess() {
+  const unlocked=!!adminToken;
+  get('editorLoginForm').hidden=unlocked;
+  get('editorUnlocked').hidden=!unlocked;
+  get('editorGenerate').disabled=!unlocked||!get('editorArticle').value||editorBusy;
+  if (!unlocked) clearEditorDraft();
+}
+function syncEditorSelection() {
+  const picker=get('editorArticle');
+  if(!picker) return;
+  const previous=picker.value;
+  const entries=[...selectedArticles.values()];
+  picker.innerHTML='<option value="">Scegli un articolo selezionato</option>'+entries.map(a=>
+    `<option value="${safeText(a.id)}">${safeText(a.source)} · ${safeText(a.title)}</option>`).join('');
+  const next=entries.some(a=>a.id===previous)?previous:(entries.length===1?entries[0].id:'');
+  picker.value=next;
+  picker.disabled=!entries.length;
+  get('editorSelectionInfo').textContent=entries.length?
+    `${entries.length} articol${entries.length===1?'o disponibile':'i disponibili'}. L'IA elabora soltanto quello scelto.`:
+    'Seleziona un articolo nella Ricerca prima di procedere.';
+  if(next!==previous) clearEditorDraft();
+  get('editorGenerate').disabled=!adminToken||!next||editorBusy;
+}
+async function unlockEditor(event) {
+  event.preventDefault();
+  if(editorBusy) return;
+  const token=get('editorPassword').value.trim();
+  if(!token) return editorMessage('Inserisci la password amministrativa.','error');
+  editorBusy=true;
+  get('editorUnlockButton').disabled=true;
+  adminToken=token;
+  editorMessage('Verifico le credenziali…');
+  try {
+    await adminFetch('/admin/feeds');
+    get('editorPassword').value='';
+    setAdminUnlocked(true);
+    editorMessage('Area editoriale sbloccata. Scegli un articolo, poi richiedi la sintesi.', 'success');
+  } catch(error) {
+    adminToken='';
+    get('editorPassword').value='';
+    setAdminUnlocked(false);
+    editorMessage(error.message,'error');
+  } finally {
+    editorBusy=false;
+    get('editorUnlockButton').disabled=false;
+    syncEditorAccess();
+  }
+}
+function renderEditorDraft() {
+  const result=editorResult;
+  if(!result) return clearEditorDraft();
+  const article=selectedArticles.get(String(result.article_id));
+  const approved=result.status==='approved';
+  get('editorDraft').hidden=false;
+  get('editorAbstract').value=String(result.abstract_ai||'');
+  get('editorDraftInfo').textContent=`${approved?'APPROVATO':'BOZZA DA VERIFICARE'} · ${result.cached?'Recuperato dalla cache':'Generato adesso'} · Controllo numeri: ${result.numeric_check||'non disponibile'}`;
+  get('editorSourceLink').href=article?safeUrl(article.url):'#';
+  get('editorReviewed').checked=false;
+  get('editorReviewed').disabled=approved;
+  get('editorApprove').disabled=approved||editorBusy;
+  if(!approved) get('editorApprove').disabled=true;
+  get('editorRevoke').disabled=!approved||editorBusy;
+}
+function editorBusyState(busy) {
+  editorBusy=busy;
+  get('editorGenerate').disabled=busy||!adminToken||!get('editorArticle').value;
+  get('editorApprove').disabled=busy||!editorResult||editorResult.status==='approved'||!get('editorReviewed').checked;
+  get('editorRevoke').disabled=busy||!editorResult||editorResult.status!=='approved';
+  get('editorArticle').disabled=busy||selectedArticles.size===0;
+}
+async function generateEditorAbstract() {
+  if(editorBusy) return;
+  const id=Number(get('editorArticle').value);
+  if(!id||!selectedArticles.has(String(id))) return editorMessage('Scegli prima un articolo della rassegna.','error');
+  if(!adminToken) return editorMessage('Sblocca prima l’area editoriale.','error');
+  clearEditorDraft();
+  editorBusyState(true);
+  editorMessage('Recupero la cache o genero un abstract per questo solo articolo…');
+  try {
+    const result=await adminFetch('/admin/ai-abstract',{method:'POST',data:{article_id:id}});
+    if(get('editorArticle').value!==String(id)) return;
+    editorResult=result;
+    renderEditorDraft();
+    editorMessage(result.cached?'Abstract già presente nella cache: nessuna nuova generazione IA.':'Abstract generato e salvato come bozza. Verificalo con la fonte prima di approvare.','success');
+  } catch(error) { editorMessage(error.message,'error'); }
+  finally {editorBusyState(false);}
+}
+async function changeEditorApproval(approve) {
+  if(editorBusy||!editorResult) return;
+  const id=Number(editorResult.article_id);
+  if(approve && !get('editorReviewed').checked) return editorMessage('Prima conferma di aver verificato l’abstract sulla fonte originale.','error');
+  if(!selectedArticles.has(String(id))) return editorMessage('L’articolo non è più nella selezione. Selezionalo nuovamente.','error');
+  editorBusyState(true);
+  editorMessage(approve?'Salvo l’approvazione…':'Riporto la sintesi in bozza…');
+  try {
+    const response=await adminFetch('/admin/ai-abstract',{method:'PATCH',data:{article_id:id,approve}});
+    editorResult={...editorResult,...response,cached:true,status:approve?'approved':'draft'};
+    const old=selectedArticles.get(String(id));
+    if(approve) {
+      selectedArticles.set(String(id),{...old,abstract:response.abstract_ai,abstract_source:'pagina_originale',abstract_method:'generativo_italiano'});
+    } else {
+      const fallback=String(old.description||'');
+      selectedArticles.set(String(id),{...old,abstract:fallback,abstract_source:'descrizione_rss',abstract_method:'estratto'});
+    }
+    invalidateRassegna();
+    renderResults();
+    await runSearch();
+    renderEditorDraft();
+    editorMessage(approve?'Abstract approvato e disponibile nella rassegna. Genera nuovamente il documento per aggiornare i testi.':'Abstract rimesso in bozza: la rassegna userà l’estratto RSS fino a nuova approvazione.','success');
+  } catch(error) {editorMessage(error.message,'error');}
+  finally {editorBusyState(false);}
+}
+
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click',()=>showView(b.dataset.view)));
 document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click',()=>showView(b.dataset.goto)));
 document.querySelectorAll('.filter-pill').forEach(b => b.addEventListener('click',()=>changeFilter(b)));
 get('apiForm').addEventListener('submit',connectApi);
 get('adminUnlockForm').addEventListener('submit',unlockFeeds);
+get('editorLoginForm').addEventListener('submit',unlockEditor);
+get('editorLockButton').addEventListener('click',()=>{lockFeeds();editorMessage('Area editoriale bloccata.');});
+get('editorArticle').addEventListener('change',()=>{clearEditorDraft();syncEditorAccess();editorMessage('Articolo scelto. Premi Genera / recupera abstract IA per proseguire.');});
+get('editorGenerate').addEventListener('click',generateEditorAbstract);
+get('editorReviewed').addEventListener('change',()=>{
+  get('editorApprove').disabled=editorBusy||!editorResult||editorResult.status==='approved'||!get('editorReviewed').checked;
+});
+get('editorApprove').addEventListener('click',()=>changeEditorApproval(true));
+get('editorRevoke').addEventListener('click',()=>changeEditorApproval(false));
 get('adminLockButton').addEventListener('click',lockFeeds);
 get('addFeedForm').addEventListener('submit',addNewFeed);
 get('feedList').addEventListener('click',changeFeedAction);
@@ -670,7 +858,7 @@ get('copyRassegna').addEventListener('click',copyRassegna);
 get('downloadRassegna').addEventListener('click',downloadRassegna);
 get('printRassegna').addEventListener('click',()=>window.print());
 get('workerUrl').value = apiBase;
-if (!apiBase) setStatus('Interfaccia 3F pronta: collega il Worker per visualizzare le notizie e gestire più fonti.', 'info');
+if (!apiBase) setStatus('Interfaccia 3M pronta: collega il Worker per cercare notizie e gestire le sintesi IA.', 'info');
 updateSelection();
 runSearch();
 const initialView = window.location.hash.slice(1);

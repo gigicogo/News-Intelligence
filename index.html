@@ -31,7 +31,7 @@
         <button type="button" class="nav-button" data-view="rassegna"><span aria-hidden="true">▤</span> Crea rassegna <span id="selectionCountBadge" class="nav-count">0</span></button>
       </nav>
       <div class="side-note">
-        <div class="small-chip">FASE 2F.1 · DATI REALI</div>
+        <div class="small-chip">FASE 3B · ABSTRACT DA RSS</div>
         <p>Notizie importate da Cloudflare: ricerca e rassegna usando risultati reali.</p>
         <p><strong>Abstract non ancora generati con IA.</strong> Usiamo le descrizioni pubblicate nei feed.</p>
       </div>
@@ -48,7 +48,7 @@
         <div class="page-intro">
           <span class="eyebrow accent">SCOPRI, SELEZIONA, RIASSUMI</span>
           <h1 id="titleSearch">Trova le notizie.<br><span>Conserva ciò che conta.</span></h1>
-          <p>Cerca negli articoli archiviati dai feed RSS, seleziona i risultati e crea una rassegna con i titoli cliccabili e gli estratti disponibili.</p>
+          <p>Cerca negli articoli archiviati dai feed RSS, seleziona i risultati e crea una rassegna con titoli cliccabili e sintesi estrattive ricavate dai feed.</p>
         </div>
         <form id="apiForm" class="panel api-panel">
           <div class="panel-head"><div><h2>Collega il motore RSS</h2><p>Incolla una volta l'indirizzo pubblico del Worker Cloudflare, senza /health. Nessuna password.</p></div></div>
@@ -95,7 +95,7 @@
           <div><span class="eyebrow">RISULTATI</span><h2>Notizie individuate</h2></div>
           <span class="result-count" id="resultsCount">0 risultati</span>
         </div>
-        <div class="notice" role="note"><strong>Nota sugli estratti:</strong> i testi visualizzati provengono dalle descrizioni RSS. Non sono ancora abstract editoriali prodotti dall'IA. I filtri geografici e per tipologia saranno attivati dopo la classificazione dei contenuti.</div>
+        <div class="notice" role="note"><strong>Come leggere gli abstract:</strong> il Worker seleziona le frasi più informative dal testo RSS disponibile. Quando il feed è breve, mostra invece la descrizione originale. Non sono riassunti generati da un modello di IA e non derivano necessariamente dal testo integrale dell’articolo. I filtri geografici e per tipologia arriveranno in seguito.</div>
         <div id="results" class="results-list" aria-live="polite"></div>
         <div class="action-bar"><span id="selectedSummary">Nessun articolo selezionato</span><button type="button" id="goToRassegna" class="secondary-button" disabled>Prepara la rassegna →</button></div>
       </section>
@@ -110,7 +110,7 @@
       <section id="view-rassegna" class="view" hidden aria-labelledby="titleRassegna">
         <div class="page-intro compact"><span class="eyebrow accent">DALLA RICERCA ALLA RASSEGNA</span><h1 id="titleRassegna">La tua <span>rassegna.</span></h1><p>Scegli gli articoli dalla ricerca, attribuisci un titolo e genera un documento con collegamenti alle fonti e abstract di poche righe.</p></div>
         <div class="panel rassegna-controls">
-          <div class="panel-head"><div><h2>Prepara il documento</h2><p>La rassegna usa gli articoli reali selezionati, con gli estratti RSS disponibili.</p></div></div>
+          <div class="panel-head"><div><h2>Prepara il documento</h2><p>La rassegna usa gli articoli reali selezionati e le sintesi estrattive restituite dal Worker.</p></div></div>
           <label for="rassegnaTitle" class="field-label">Titolo della rassegna</label>
           <input id="rassegnaTitle" type="text" maxlength="100" value="Rassegna · Intelligenza artificiale">
           <div class="form-bottom"><span id="rassegnaSelection" class="form-message">0 articoli selezionati</span><button id="generateRassegna" class="primary-button" type="button">▤ Genera rassegna</button></div>
@@ -123,13 +123,13 @@
         </div>
       </section>
 
-      <footer class="main-footer">News Intelligence · Ricerca RSS reale e rassegne · Fase 2F</footer>
+      <footer class="main-footer">News Intelligence · Ricerca RSS, abstract estrattivi e rassegne · Fase 3B</footer>
     </main>
   </div>
   <script>
 'use strict';
 
-// Fase 2F: tutte le ricerche usano soltanto notizie reali lette da Cloudflare D1.
+// Fase 3B: gli abstract della API 3A sono usati nella ricerca e nella rassegna. Nessuna API a pagamento.
 // L'URL del Worker è pubblico; ADMIN_TOKEN non deve mai essere scritto in questi file.
 const API_KEY = 'news-intelligence-worker-url';
 const filters = { periodo: '7' };
@@ -178,6 +178,25 @@ function updateSelection() {
   get('rassegnaSelection').textContent = `${n} articol${n===1?'o selezionato':'i selezionati'}`;
   get('generateRassegna').disabled = n === 0;
 }
+function prepareArticle(a) {
+  // L'abstract del Worker 3A ha priorità. Se manca, mostra la descrizione RSS.
+  const workerAbstract = String(a.abstract ?? '').trim();
+  const fallback = String(a.description ?? '').trim();
+  const abstract = (workerAbstract || fallback).slice(0, 520);
+  return {
+    ...a,
+    id: String(a.id),
+    abstract,
+    abstract_source: workerAbstract ? String(a.abstract_source || 'descrizione_rss') : (fallback ? 'descrizione_rss' : 'assente'),
+    abstract_method: workerAbstract ? String(a.abstract_method || 'estratto') : (fallback ? 'estratto' : 'nessuno')
+  };
+}
+function abstractLabel(a) {
+  if (!a.abstract) return 'Nessun testo disponibile nel feed';
+  const origin = a.abstract_source === 'testo_rss' ? 'testo RSS' : 'descrizione RSS';
+  if (a.abstract_method === 'estrattivo') return `Sintesi estrattiva dal ${origin} · senza IA`;
+  return `Estratto dalla ${origin === 'testo RSS' ? 'fonte RSS' : 'descrizione RSS'} · senza IA`;
+}
 function renderResults() {
   get('resultsCount').textContent = visibleResults.length + (visibleResults.length===1?' risultato':' risultati') + (visibleResults.length===100?' (limite 100)':'');
   const container = get('results');
@@ -191,7 +210,7 @@ function renderResults() {
       <div><div class="article-meta"><span>${safeText(a.source)}</span><span aria-hidden="true">·</span><time>${safeText(formatDate(a.published_at || a.first_seen_at))}</time></div>
         <a class="article-title" href="${safeText(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${safeText(a.title)} ↗</a>
         <p class="article-summary">${safeText(a.abstract || 'Il feed non fornisce una descrizione.')}</p>
-        <span class="article-bottom">${a.description ? 'Estratto dal feed RSS · non è un abstract IA' : 'Nessun estratto nel feed'}</span>
+        <span class="article-bottom">${safeText(abstractLabel(a))}</span>
       </div>
     </article>`).join('');
   container.querySelectorAll('[data-article-id]').forEach(c => c.addEventListener('change',e => {
@@ -224,9 +243,7 @@ async function runSearch() {
     const params = new URLSearchParams({ q: get('searchQuery').value.trim(), days: filters.periodo });
     const data = await fetchJson('/search?' + params.toString());
     if (myRun !== queryNumber) return;
-    visibleResults = (data.articles || []).map(a => ({
-      ...a, id: String(a.id), abstract: String(a.description || '').trim().slice(0, 420)
-    }));
+    visibleResults = (data.articles || []).map(prepareArticle);
     renderResults();
     const n = visibleResults.length;
     setStatus(n ? `Collegamento riuscito: ${n} ${n===1?'notizia trovata':'notizie trovate'} negli ultimi ${filters.periodo} giorni.` : `Collegamento riuscito, ma nessun articolo corrisponde ai filtri degli ultimi ${filters.periodo} giorni. Il Worker risponde correttamente.`, 'success');
@@ -234,7 +251,7 @@ async function runSearch() {
     if (myRun !== queryNumber) return;
     visibleResults = [];
     get('resultsCount').textContent = 'Connessione non riuscita';
-    get('results').innerHTML = '<div class="empty-state"><h3>Non riesco a leggere gli articoli</h3><p>Verifica l’indirizzo del Worker e che sia installata la versione 2F. Se hai appena pubblicato il codice, riprova a ricaricare la pagina.</p></div>';
+    get('results').innerHTML = '<div class="empty-state"><h3>Non riesco a leggere gli articoli</h3><p>Verifica l’indirizzo del Worker e che sia attivo. Se hai appena pubblicato il codice, riprova a ricaricare la pagina.</p></div>';
     const detail = (error instanceof TypeError && /fetch/i.test(error.message)) ? 'Il browser non riesce a raggiungere il Worker (rete o autorizzazioni CORS). Verifica che l’indirizzo sia quello del Worker attivo.' : error.message;
     setStatus(`Connessione non riuscita: ${detail}`, 'error');
   }
@@ -283,13 +300,13 @@ async function loadFeeds() {
         ${f.last_error?`<div class="feed-error">Ultimo errore: ${safeText(f.last_error)}</div>`:''}
       </div></div>`).join('') : '<div class="empty-state"><h3>Nessuna fonte registrata</h3></div>';
   } catch(error) {
-    container.innerHTML = '<div class="empty-state"><h3>Impossibile leggere le fonti</h3><p>Verifica che il Worker sia aggiornato alla versione 2F.</p></div>';
+    container.innerHTML = '<div class="empty-state"><h3>Impossibile leggere le fonti</h3><p>Verifica il collegamento al Worker.</p></div>';
   }
 }
 function markdownRassegna() {
   const today = new Date().toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'});
-  const lines = generatedArticles.map(a => `### [${a.title}](${a.url})\n\nFonte: ${a.source} · ${formatDate(a.published_at || a.first_seen_at)}\n\n> ${a.abstract || 'Descrizione non disponibile'}\n`);
-  return `# ${generatedTitle}\n\nData di creazione: ${today}\n\n` + lines.join('\n') + '\n_Estratti originali dei feed RSS; non sono abstract generati da IA._\n';
+  const lines = generatedArticles.map(a => `### [${a.title}](${a.url})\n\nFonte: ${a.source} · ${formatDate(a.published_at || a.first_seen_at)}\n\n> ${a.abstract || 'Descrizione non disponibile'}\n\n_${abstractLabel(a)}_\n`);
+  return `# ${generatedTitle}\n\nData di creazione: ${today}\n\n` + lines.join('\n') + '\n_Le sintesi sono estrattive: non sono generate da un modello di IA e dipendono dalla lunghezza dei feed RSS._\n';
 }
 function generateRassegna() {
   generatedArticles = [...selectedArticles.values()];
@@ -297,8 +314,8 @@ function generateRassegna() {
   generatedTitle = get('rassegnaTitle').value.trim() || 'Rassegna informativa';
   get('rassegnaEmpty').hidden = true;
   get('rassegnaOutput').hidden = false;
-  get('rassegnaMessage').textContent = 'Rassegna pronta, con estratti RSS. Puoi copiarla, scaricarla in Markdown o stamparla in PDF.';
-  get('rassegnaPreview').innerHTML = `<h2>${safeText(generatedTitle)}</h2><p class="document-date">Creata il ${safeText(new Date().toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'}))} · Estratti RSS</p>` + generatedArticles.map(a => `<section class="document-article"><h3><a href="${safeText(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${safeText(a.title)} ↗</a></h3><small>${safeText(a.source)} · ${safeText(formatDate(a.published_at || a.first_seen_at))}</small><blockquote>${safeText(a.abstract || 'Descrizione non disponibile')}</blockquote></section>`).join('');
+  get('rassegnaMessage').textContent = 'Rassegna pronta, con sintesi dai feed RSS. Puoi copiarla, scaricarla in Markdown o stamparla in PDF.';
+  get('rassegnaPreview').innerHTML = `<h2>${safeText(generatedTitle)}</h2><p class="document-date">Creata il ${safeText(new Date().toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'}))} · Sintesi estrattive da RSS</p>` + generatedArticles.map(a => `<section class="document-article"><h3><a href="${safeText(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${safeText(a.title)} ↗</a></h3><small>${safeText(a.source)} · ${safeText(formatDate(a.published_at || a.first_seen_at))}</small><blockquote>${safeText(a.abstract || 'Descrizione non disponibile')}</blockquote><p class="article-bottom">${safeText(abstractLabel(a))}</p></section>`).join('');
 }
 async function copyRassegna() {
   try { await navigator.clipboard.writeText(markdownRassegna()); get('rassegnaMessage').textContent='Testo copiato negli appunti.'; }
@@ -323,7 +340,7 @@ get('copyRassegna').addEventListener('click',copyRassegna);
 get('downloadRassegna').addEventListener('click',downloadRassegna);
 get('printRassegna').addEventListener('click',()=>window.print());
 get('workerUrl').value = apiBase;
-if (!apiBase) setStatus('Interfaccia 2F.1 pronta: inserisci l’indirizzo del Worker e premi Collega.', 'info');
+if (!apiBase) setStatus('Interfaccia 3B pronta: collega il Worker 3A per visualizzare le sintesi RSS.', 'info');
 updateSelection();
 runSearch();
 const initialView = window.location.hash.slice(1);

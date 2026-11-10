@@ -63,6 +63,12 @@ select,textarea{font:inherit;color:#15334b}
 .editor-emphasis{font-weight:750;color:#187e96}
 @media(max-width:720px){.editor-actions{align-items:stretch;flex-direction:column}.editor-actions button{white-space:normal;width:100%}}
 
+/* Consolidamento 1.0 */
+.pending-filters{grid-column:1/-1;padding:12px 15px;border-radius:8px;background:#f5f8fa;color:#627b8d;font-size:12px;line-height:1.6}
+.article-editor-action{margin-top:13px}.article-editor-hint{margin-top:10px;color:#8394a3;font-size:11px}
+.quick-maintenance{margin:18px 0 0;padding:15px;border-radius:10px;background:#edf7fa;border:1px solid #c7e3ea;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:#48667b}
+.quick-maintenance strong{color:#184d64}.quick-maintenance span{flex:1;min-width:185px}
+@media(max-width:720px){.quick-maintenance button{width:100%}}
 </style>
 
 </head>
@@ -78,9 +84,10 @@ select,textarea{font:inherit;color:#15334b}
         <button type="button" class="nav-button active" data-view="ricerca" aria-current="page"><span aria-hidden="true">⌕</span> Ricerca notizie</button>
         <button type="button" class="nav-button" data-view="feed"><span aria-hidden="true">≋</span> I miei feed RSS <span id="feedCountBadge" class="nav-count">0</span></button>
         <button type="button" class="nav-button" data-view="rassegna"><span aria-hidden="true">▤</span> Crea rassegna <span id="selectionCountBadge" class="nav-count">0</span></button>
+        <button type="button" class="nav-button" id="navEditor"><span aria-hidden="true">✦</span> Editor IA</button>
       </nav>
       <div class="side-note">
-        <div class="small-chip">FASE 3N · REVISIONE MANUALE</div>
+        <div class="small-chip">VERSIONE 1.0 · CONSOLIDAMENTO</div>
         <p>Notizie importate da Cloudflare: ricerca e rassegna usando risultati reali.</p>
         <p><strong>Abstract IA approvati, quando disponibili.</strong> Altrimenti usiamo sintesi ed estratti RSS.</p>
       </div>
@@ -104,6 +111,7 @@ select,textarea{font:inherit;color:#15334b}
           <label class="field-label" for="workerUrl">Indirizzo Worker (https://...workers.dev)</label>
           <div class="query-row"><input id="workerUrl" type="url" placeholder="https://news-intelligence-worker.nome.workers.dev" autocomplete="url" required><button id="connectButton" class="primary-button" type="submit">Collega</button></div>
           <p class="form-message" role="status" id="apiStatus">Collega il Worker per visualizzare le notizie reali.</p>
+          <p id="collectionStatus" class="form-message" role="status">Stato raccolta: in attesa del collegamento.</p>
         </form>
         <form id="searchForm" class="panel filters-panel">
           <div class="panel-head"><div><h2>Imposta la ricerca</h2><p>Titolo, descrizione e testo RSS indicizzato nel database.</p></div><span class="mini-label">FILTRI GUIDATI</span></div>
@@ -121,23 +129,7 @@ select,textarea{font:inherit;color:#15334b}
                 <button class="filter-pill selected" type="button" data-value="7" aria-pressed="true">7 giorni</button>
               </div>
             </fieldset>
-            <fieldset class="filter-group" disabled>
-              <legend>Area della notizia (in preparazione)</legend>
-              <div class="pill-group" data-group="area">
-                <button class="filter-pill selected" type="button" data-value="tutte" aria-pressed="true">Tutte</button>
-                <button class="filter-pill" type="button" data-value="italia" aria-pressed="false">Italia</button>
-                <button class="filter-pill" type="button" data-value="europa" aria-pressed="false">Europa</button>
-                <button class="filter-pill" type="button" data-value="mondo" aria-pressed="false">Mondo</button>
-              </div>
-            </fieldset>
-            <fieldset class="filter-group wide" disabled>
-              <legend>Tipo di contenuto (in preparazione)</legend>
-              <div class="pill-group" data-group="tipo">
-                <button class="filter-pill selected" type="button" data-value="tutti" aria-pressed="true">Tutti</button>
-                <button class="filter-pill" type="button" data-value="novita" aria-pressed="false">Novità e annunci</button>
-                <button class="filter-pill" type="button" data-value="approfondimenti" aria-pressed="false">Analisi e approfondimenti</button>
-              </div>
-            </fieldset>
+            <div class="pending-filters" role="note">Filtri geografici e per tipologia: non ancora disponibili. La ricerca attuale usa parole chiave e periodo, senza classificazioni automatiche poco affidabili.</div>
           </div>
         </form>
         <div class="section-heading results-heading">
@@ -167,6 +159,7 @@ select,textarea{font:inherit;color:#15334b}
               </div>
               <div class="form-bottom"><span class="form-message">Il sito della fonte deve pubblicare un feed RSS/Atom accessibile via HTTPS.</span><button type="submit" class="primary-button" id="addFeedButton">+ Verifica e aggiungi feed</button></div>
             </form>
+            <div class="quick-maintenance"><strong>Raccolta RSS</strong><span>Se il database è stato svuotato per inattività, riavvia qui l'acquisizione dei feed attivi.</span><button type="button" id="resumeCollection" class="secondary-button">↻ Raccogli ora / riattiva</button></div>
             <div class="opml-panel">
               <h3>Importa più fonti da un file OPML</h3>
               <p>Hai già dei feed in Feedly, Inoreader o in un altro lettore? Esporta l’elenco in formato <strong>.opml</strong> e selezionalo qui. Vedrai un’anteprima prima di aggiungere qualsiasi fonte. Nessun file viene caricato su server esterni.</p>
@@ -240,7 +233,7 @@ select,textarea{font:inherit;color:#15334b}
         </div>
       </section>
 
-      <footer class="main-footer">News Intelligence · Ricerca RSS, multi-feed e rassegne · Fase 3N</footer>
+      <footer class="main-footer">News Intelligence · Ricerca RSS, multi-feed e rassegne · Versione 1.0 RC</footer>
     </main>
   </div>
   <script>
@@ -276,6 +269,37 @@ function normalizeBase(raw) {
     if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash) return '';
     return u.origin + u.pathname.replace(/\/(?:health|search|articles|feeds)\/?$/, '').replace(/\/+$/, '');
   } catch { return ''; }
+}
+async function refreshCollectionStatus() {
+  if (!apiBase) return;
+  const el=get('collectionStatus');
+  try {
+    const result=await fetchJson('/status');
+    if (result.paused) {
+      el.textContent='Raccolta in pausa dopo '+result.idle_pause_days+' giorni senza attività amministrativa. Vai a I miei feed RSS, sblocca la gestione e premi «Raccogli ora / riattiva».';
+      el.className='form-message error';
+    } else {
+      el.textContent='Raccolta attiva · '+result.feeds+' fonti configurate · '+result.articles+' articoli presenti. Conservazione: '+result.retention_days+' giorni.';
+      el.className='form-message success';
+    }
+  } catch(error) {
+    el.textContent='Stato della raccolta non disponibile: '+error.message;
+    el.className='form-message error';
+  }
+}
+async function resumeCollection() {
+  const button=get('resumeCollection');
+  if (!adminToken) return setFeedMessage('Sblocca prima la gestione dei feed.','error');
+  button.disabled=true;
+  setFeedMessage('Riattivo la raccolta. L’operazione può richiedere qualche istante…');
+  try {
+    const result=await adminFetch('/admin/resume',{method:'POST'});
+    await refreshCollectionStatus();
+    await loadFeeds();
+    await runSearch();
+    setFeedMessage('Raccolta riattivata: '+(result.processed_feeds||0)+' feed controllati. Le altre fonti verranno aggiornate dai cicli programmati.','success');
+  } catch(error) { setFeedMessage(error.message,'error'); }
+  finally {button.disabled=false;}
 }
 function setStatus(message, kind='') {
   get('apiStatus').textContent = message;
@@ -354,6 +378,7 @@ function renderResults() {
         <a class="article-title" href="${safeText(safeUrl(a.url))}" target="_blank" rel="noopener noreferrer">${safeText(a.title)} ↗</a>
         <p class="article-summary">${safeText(a.abstract || 'Il feed non fornisce una descrizione.')}</p>
         <span class="article-bottom">${safeText(abstractLabel(a))}</span>
+        ${a.ai_supported ? `<div class="article-editor-action"><button type="button" class="secondary-button small" data-open-editor="${safeText(a.id)}">✦ Apri nell'editor IA</button></div>` : `<div class="article-editor-hint">Sintesi IA da pagina non disponibile per questa fonte: rimane utilizzabile l'estratto RSS.</div>`}
       </div>
     </article>`).join('');
   container.querySelectorAll('[data-article-id]').forEach(c => c.addEventListener('change',e => {
@@ -366,7 +391,25 @@ function renderResults() {
     invalidateRassegna();
     updateSelection();
   }));
+  container.querySelectorAll('[data-open-editor]').forEach(button=>button.addEventListener('click',()=>{
+    const id=String(button.dataset.openEditor);
+    const article=visibleResults.find(item=>item.id===id);
+    if (!article) return;
+    selectedArticles.set(id,article);
+    invalidateRassegna();
+    updateSelection();
+    showEditor(id);
+  }));
   updateSelection();
+}
+function showEditor(articleId='') {
+  showView('rassegna');
+  if (articleId) {
+    get('editorArticle').value=String(articleId);
+    clearEditorDraft();
+    syncEditorAccess();
+  }
+  get('aiEditorPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function fetchJson(path) {
   const response = await fetch(apiBase + path, { headers: { accept: 'application/json' }, cache: 'no-store' });
@@ -395,6 +438,7 @@ async function runSearch() {
       selectedArticles.set(a.id, a);
     }
     renderResults();
+    if(myRun===queryNumber) refreshCollectionStatus();
     const n = visibleResults.length;
     setStatus(n ? `Collegamento riuscito: ${n} ${n===1?'notizia trovata':'notizie trovate'} negli ultimi ${filters.periodo} giorni.` : `Collegamento riuscito, ma nessun articolo corrisponde ai filtri degli ultimi ${filters.periodo} giorni. Il Worker risponde correttamente.`, 'success');
   } catch (error) {
@@ -447,7 +491,7 @@ async function adminFetch(path, options={}) {
   if (options.data) config.body=JSON.stringify(options.data);
   let response;
   try { response=await fetch(apiBase+path,config); }
-  catch {throw new Error('Il browser non riesce a contattare la gestione protetta del Worker. Verifica che il Worker sia aggiornato alla fase 3N.');}
+  catch {throw new Error('Il browser non riesce a contattare la gestione protetta del Worker. Verifica che il Worker sia aggiornato alla versione 1.0.');}
   const result=await response.json().catch(()=>({}));
   if (!response.ok || !result.ok) throw new Error(result.error||('Errore HTTP '+response.status));
   return result;
@@ -466,6 +510,8 @@ async function unlockFeeds(event) {
   setFeedMessage('Verifico la password…');
   try {
     await adminFetch('/admin/feeds');
+    await adminFetch('/admin/activity',{method:'POST'});
+    refreshCollectionStatus();
     get('adminPassword').value='';
     setAdminUnlocked(true);
     setFeedMessage('Gestione sbloccata. Puoi aggiungere, mettere in pausa o rimuovere le fonti.','success');
@@ -739,12 +785,13 @@ function syncEditorSelection() {
   if(!picker) return;
   const previous=picker.value;
   const entries=[...selectedArticles.values()];
+  const eligible = entries.filter(a=>a.ai_supported !== false || isApprovedAi(a));
   picker.innerHTML='<option value="">Scegli un articolo selezionato</option>'+entries.map(a=>
-    `<option value="${safeText(a.id)}">${safeText(a.source)} · ${safeText(a.title)}</option>`).join('');
-  const next=entries.some(a=>a.id===previous)?previous:(entries.length===1?entries[0].id:'');
+    `<option value="${safeText(a.id)}" ${a.ai_supported===false && !isApprovedAi(a)?'disabled':''}>${safeText(a.source)} · ${safeText(a.title)}${a.ai_supported===false && !isApprovedAi(a)?' (solo RSS)':''}</option>`).join('');
+  const next=eligible.some(a=>a.id===previous)?previous:(eligible.length===1?eligible[0].id:'');
   picker.value=next;
-  picker.disabled=!entries.length;
-  get('editorSelectionInfo').textContent=entries.length?
+  picker.disabled=!eligible.length;
+  get('editorSelectionInfo').textContent=entries.length&&!eligible.length?'Per queste fonti rimangono disponibili gli abstract RSS, ma non la sintesi IA da pagina completa.':entries.length?
     `${entries.length} articol${entries.length===1?'o disponibile':'i disponibili'}. L'IA elabora soltanto quello scelto.`:
     'Seleziona un articolo nella Ricerca prima di procedere.';
   if(next!==previous) clearEditorDraft();
@@ -761,6 +808,8 @@ async function unlockEditor(event) {
   editorMessage('Verifico le credenziali…');
   try {
     await adminFetch('/admin/feeds');
+    await adminFetch('/admin/activity',{method:'POST'});
+    refreshCollectionStatus();
     get('editorPassword').value='';
     setAdminUnlocked(true);
     editorMessage('Area editoriale sbloccata. Scegli un articolo, poi richiedi la sintesi.', 'success');
@@ -875,6 +924,8 @@ async function changeEditorApproval(approve) {
 }
 
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click',()=>showView(b.dataset.view)));
+get('navEditor').addEventListener('click',()=>showEditor());
+get('resumeCollection').addEventListener('click',resumeCollection);
 document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click',()=>showView(b.dataset.goto)));
 document.querySelectorAll('.filter-pill').forEach(b => b.addEventListener('click',()=>changeFilter(b)));
 get('apiForm').addEventListener('submit',connectApi);
@@ -912,7 +963,7 @@ get('copyRassegna').addEventListener('click',copyRassegna);
 get('downloadRassegna').addEventListener('click',downloadRassegna);
 get('printRassegna').addEventListener('click',()=>window.print());
 get('workerUrl').value = apiBase;
-if (!apiBase) setStatus('Interfaccia 3M pronta: collega il Worker per cercare notizie e gestire le sintesi IA.', 'info');
+if (!apiBase) setStatus('Interfaccia 1.0 pronta: collega il Worker per cercare notizie e gestire le sintesi IA.', 'info');
 updateSelection();
 runSearch();
 const initialView = window.location.hash.slice(1);
